@@ -1,0 +1,224 @@
+# Open Questions and Ambiguities
+
+This document lists all rules or behaviors that are ambiguous, unspecified, or could not be definitively determined from the competition PDF. Each item includes a recommended default for the simulator.
+
+---
+
+## OQ-1: Board Cell Layout
+
+**Question:** What is the exact physical layout of cells on the board? The board diagram shows cells ID:1 through ID:44, but the exact path topology (which cells are adjacent, how the home stretch connects) is not fully described in text.
+
+**PDF evidence:** Board diagram with numbered cells and directional arrows. The diagram is the only source.
+
+**Status:** Partially resolved from diagram. Exact adjacency list requires careful visual inspection.
+
+**Recommended default:** Reconstruct the board from the diagram. Mark as [OPEN] until verified against the actual competition server behavior.
+
+---
+
+## OQ-2: Home Stretch Cell Ownership
+
+**Question:** Are cells 41–44 shared among all players, or does each player have their own private set of home stretch cells?
+
+**PDF evidence:** The Board response shows tokens at values 41, 42, 43. The begin/end offsets suggest each player has a different view. The diagram shows colored cells at specific positions.
+
+**Status:** Ambiguous. The competition may use a shared global numbering for home stretch cells (e.g., yellow=41–44, red=45–48, etc.) or each player may see their home stretch as 41–44 regardless of global position.
+
+**Recommended default:** Each player's home stretch is their own private cells 41–44. The engine maps these to global positions internally. This matches the player-relative coordinate philosophy.
+
+---
+
+## OQ-3: Entering the Board on a 6
+
+**Question:** When a player rolls a 6 and has tokens in the home yard, must they enter a new token, or may they move an existing on-board token instead?
+
+**PDF evidence:** "اگر هر کدام از مهره ها در صفحه بازی با عدد تاس موجود امکان حرکت داشته باشند، باید حرکت انجام شود" — If any token can move, the move must be made.
+
+**Status:** Implied but not explicit. The rule says "if any token can move, you must move." This suggests entering a new token on a 6 is mandatory if no other token can move, but optional if other tokens can also move.
+
+**Recommended default:** Entering a new token on a 6 is optional. The player can choose to enter or move an existing token. If no other move is possible, entering is mandatory.
+
+---
+
+## OQ-4: Maximum Consecutive 6s
+
+**Question:** What happens on the third (or more) consecutive 6? The PDF says "a dice with 6 only once includes the replay reward" and "consecutive dice 6 second will not have a reward."
+
+**PDF evidence:** "یک تاس با عدد 6 فقط یک مرتبه شامل جایزه بازی مجدد خواهد بود" and "تاس پیاپی 6 دوم جایزه نخواهد داشت"
+
+**Status:** Two interpretations:
+1. After 2 consecutive 6s, the turn ends (most common in Ludo variants)
+2. After 1st 6 you get an extra turn; 2nd 6 you don't; 3rd 6 you do again (unlikely)
+
+**Recommended default:** Maximum 1 extra turn per turn sequence. After 2 consecutive 6s, the turn ends. This is the standard Ludo behavior and matches the "only once" phrasing.
+
+---
+
+## OQ-5: Safe Squares
+
+**Question:** Are there any safe squares where tokens cannot be captured?
+
+**PDF evidence:** None. The PDF does not mention safe squares.
+
+**Status:** Not specified. Standard Ludo has safe squares (typically the starting positions of each color).
+
+**Recommended default:** No safe squares. All cells on the shared track are vulnerable to capture. This is the simplest interpretation and matches the competition's simplified rules.
+
+---
+
+## OQ-6: Turn Order
+
+**Question:** How is the first player determined? Is it random, fixed, or based on Login order?
+
+**PDF evidence:** None. The PDF does not specify turn order.
+
+**Status:** Not specified.
+
+**Recommended default:** First player is determined randomly (coin flip or dice roll). For deterministic simulation, use the seed.
+
+---
+
+## OQ-7: Board Response Typo
+
+**Question:** The Board endpoint is spelled `Borad` in the PDF. Is this the actual spelling, or is it a typo?
+
+**PDF evidence:** "URL: http://<Domain>/api/v1/Borad"
+
+**Status:** Ambiguous. Could be intentional (competition server uses this spelling) or a typo.
+
+**Recommended default:** Use `Borad` (match the PDF exactly). If the real server uses `Board`, the adapter can be configured.
+
+---
+
+## OQ-8: Move Address Type
+
+**Question:** The Move request shows `address` as an integer (14) for normal moves but as a string ("0") for no-move. Should the implementation accept both types?
+
+**PDF evidence:** `"address" : 14` for normal move, `نشانی "0"` for no-move (string in Persian text).
+
+**Status:** Ambiguous. The PDF is inconsistent.
+
+**Recommended default:** Accept both integer and string for the address field. Send as integer for normal moves, send as string "0" for no-move (match PDF exactly).
+
+---
+
+## OQ-9: Callback URL Mechanics
+
+**Question:** What is the exact format of the callback POST request? What body is sent? What headers?
+
+**PDF evidence:** "اطلاعرسانی به صورت POST روی نشانی فوق ارسال شده و در صورت وجود {0} در نشانی، این مکاننگهدار با STATE بازی Replace خواهد شد"
+
+**Status:** Partially specified. The state replaces `{0}` in the URL, but the POST body and headers are not described.
+
+**Recommended default:** POST to the callback URL with an empty body or JSON body containing the state. The state is also in the URL query parameter.
+
+---
+
+## OQ-10: dice=0 in Board Response
+
+**Question:** The Board response shows `"dice": 6` as an example. What does `dice: 0` mean? Is it a valid value before rolling?
+
+**PDF evidence:** "مقدار تاس آماده حرکت (عددی بین 0 الی 6)" — Dice value ready for movement (number between 0 and 6).
+
+**Status:** The PDF says dice can be 0–6. A value of 0 likely means "no dice rolled yet" or "waiting for dice."
+
+**Recommended default:** dice=0 means no dice has been rolled for the current turn. The bot should wait for a non-zero dice value.
+
+---
+
+## OQ-11: Error Recovery
+
+**Question:** When a bot makes an invalid move, does the game:
+1. Re-prompt the bot for a valid move?
+2. Force Move(0) and continue?
+3. End the game immediately?
+
+**PDF evidence:** "هرگونه ارسال فرمان اشتباه ... ثبت شده و به عنوان نمره منفی در نظر گرفته میشود" — Wrong commands are recorded as negative score.
+
+**Status:** The competition records errors as negative score, but the exact recovery behavior is not specified.
+
+**Recommended default:** For the simulator: re-prompt the bot once, then force Move(0). For competition mode: match the server's behavior (likely similar).
+
+---
+
+## OQ-12: Number of Players
+
+**Question:** The competition example shows 2 players. Can there be 3 or 4 players?
+
+**PDF evidence:** The Board response example shows 2 users. The rules mention "حریف" (opponent, singular).
+
+**Status:** Likely 2 players only, but not explicitly limited.
+
+**Recommended default:** Support 2 players. Allow configuration for more, but the rules are written for 2-player games.
+
+---
+
+## OQ-13: Home Stretch Path
+
+**Question:** Is the path through cells 41–44 sequential (41→42→43→44), or is there a different path?
+
+**PDF evidence:** The board diagram shows cells 41–44 as a row. The token positions in the example (41, 42, 43) suggest sequential movement.
+
+**Status:** Implied but not explicit.
+
+**Recommended default:** Sequential path: 41→42→43→44→finished. A token at position 44 has reached the final destination.
+
+---
+
+## OQ-14: Token at Position 44
+
+**Question:** What exactly happens when a token reaches position 44? Is it "finished" and removed from play, or does it stay at 44?
+
+**PDF evidence:** "اگر چهار خانه نهایی توسط ربات پر شود" — If the four final cells are filled.
+
+**Status:** Implied. Position 44 is the last cell; filling all four means having a token at each of 41, 42, 43, and 44 simultaneously.
+
+**Recommended default:** Token at 44 is "finished" and stays there. Win condition is having all 4 tokens at positions 41–44 (one per cell).
+
+---
+
+## OQ-15: Token Distribution on Win
+
+**Question:** For a player to win, must they have exactly one token at each of positions 41, 42, 43, and 44? Or can they have multiple tokens at the same home stretch position?
+
+**PDF evidence:** "چهار خانه نهایی توسط ربات پر شود" — Four final cells are filled. Also: "در هر خانه فقط و فقط یک مهره قرار خواهد گرفت" — Exactly one token per cell.
+
+**Status:** Implied. Since only one token per cell is allowed, and there are exactly4 home stretch cells, each cell must have exactly one token.
+
+**Recommended default:** Win = one token at each of positions 41, 42, 43, and 44. No two tokens can share a home stretch cell.
+
+---
+
+## OQ-16: Capture on Home Stretch
+
+**Question:** Can tokens on the home stretch (41–44) be captured by opponents?
+
+**PDF evidence:** Not specified. The rules say "going to a cell occupied by an opponent removes the opponent's token."
+
+**Status:** Unknown. Standard Ludo varies on this.
+
+**Recommended default:** Tokens on the home stretch CANNOT be captured. The home stretch is private to each player. This is the safer assumption and matches standard Ludo.
+
+---
+
+## OQ-17: Move(0) Timing
+
+**Question:** When the bot calls Move(0), does the turn immediately end, or does the engine still process something?
+
+**PDF evidence:** "باید تابع Move با نشانی "0" فراخوانی گردد" — The Move function must be called with address "0".
+
+**Status:** Implied. Move(0) signals "I cannot move" and the turn passes.
+
+**Recommended default:** Move(0) ends the turn immediately. No dice roll, no extra turn, even if the dice was 6.
+
+---
+
+## OQ-18: Dice Roll Timing
+
+**Question:** When is the dice rolled? Before the bot is prompted, or after?
+
+**PDF evidence:** The Board response includes a `dice` field. The state `WAIT_FOR_YOU` implies the dice is ready when the bot is asked to move.
+
+**Status:** Implied. The dice is rolled before the bot is prompted.
+
+**Recommended default:** Roll dice first, then prompt bot with dice value and legal actions.
