@@ -2,7 +2,13 @@ from dataclasses import replace
 
 from ludo import rules
 from ludo.coordinates import global_to_player, player_to_global
-from ludo.model import CompetitionState, GameConfig, GameState, MoveRecord
+from ludo.model import (
+    CompetitionState,
+    GameConfig,
+    GameResult,
+    GameState,
+    MoveRecord,
+)
 
 
 def new_game(config: GameConfig, player_names: tuple[str, ...]) -> GameState:
@@ -158,3 +164,12 @@ def apply_action(
         error=False,
     )
     return new_state, record
+
+
+def get_result(state: GameState, player_names: tuple[str, ...]) -> GameResult:
+    """Return the final result of a completed game. Pure."""
+    return GameResult(
+        winner=state.winner,
+        turn_count=state.turn_number,
+        error_count=state.error_count,
+    )
