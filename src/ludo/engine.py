@@ -1,4 +1,22 @@
-from ludo.model import GameConfig
+from ludo.model import CompetitionState, GameConfig, GameState
+
+
+def new_game(config: GameConfig, player_names: tuple[str, ...]) -> GameState:
+    """Create a fresh game with given player names. Pure."""
+    tokens = tuple(
+        (0,) * config.tokens_per_player for _ in range(config.num_players)
+    )
+    return GameState(
+        tokens=tokens,
+        current_player=0,
+        dice_value=None,
+        consecutive_sixes=0,
+        game_over=False,
+        winner=None,
+        error_count=0,
+        turn_number=0,
+        state=CompetitionState.NONE,
+    )
 
 
 def next_player(current: int, config: GameConfig) -> int:
