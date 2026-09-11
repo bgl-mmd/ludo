@@ -58,7 +58,7 @@ def apply_action(
     player = state.current_player
     dice = state.dice_value if state.dice_value is not None else 0
 
-    if not rules.is_valid_action(state, action, config):
+    if state.game_over or not rules.is_valid_action(state, action, config):
         new_state = replace(
             state,
             current_player=next_player(player, config),
