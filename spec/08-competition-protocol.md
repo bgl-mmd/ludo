@@ -1,7 +1,5 @@
 # Competition REST Protocol
 
-Source: Competition PDF (`document-v2.pdf`). All details are [EXPLICIT] unless noted.
-
 ## 1. Server
 
 - **Base URL:** `https://rbc.sysx.ir`
@@ -17,7 +15,7 @@ Source: Competition PDF (`document-v2.pdf`). All details are [EXPLICIT] unless n
 | Board | `/api/v1/Borad` | Get current game state and board |
 | Move | `/api/v1/Move` | Submit a move |
 
-**Note:** The PDF spells the board endpoint as `Borad` (not `Board`). The implementation must use the exact spelling from the PDF.
+**Note:** The board endpoint is spelled `Borad` (not `Board`). The implementation must use the exact spelling.
 
 ## 3. Login
 
@@ -170,9 +168,7 @@ When no token can legally move:
 }
 ```
 
-**Note:** The PDF shows `address` as a string `"0"` for the no-move case, but as an integer `14` for normal moves. The implementation should handle both.
-
-**Source:** [EXPLICIT] "باید تابع Move با نشانی "0" فراخوانی گردد"
+**Note:** The `address` field is shown as an integer (`14`) for normal moves but as a string (`"0"`) for no-move. The implementation should handle both.
 
 ### Response
 
@@ -215,90 +211,110 @@ The following are recorded as errors with negative score:
 - Hanging (no response)
 - Any other invalid command
 
-**Source:** [EXPLICIT] "هرگونه ارسال فرمان اشتباه، مانند حرکت در زمانی که نوبت ربات شما نیست یا حرکت به خانه‌ای که پیشتر اشغال شده و ... ثبت شده و به عنوان نمره منفی در نظر گرفته میشود"
+## 8. Runner Layer Design
 
-## 8. Adapter Layer Design
-
-The competition adapter wraps the core engine to communicate with the real server:
+The competition **runner** is a function that owns the game loop and communicates with the real server. The bot code is identical whether using this runner or the simulation runner. IO (HTTP) is kept in small client functions; parsing and decision logic are pure.
 
 ```python
-class CompetitionAdapter:
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-        self.token = None
+# ---- Pure layer: board parsing (no IO) ----
 
-    def login(self, game_id: str, username: str, password: str,
-              callback_url: str = None) -> str:
-        """Register with the game server. Returns auth token."""
-        pass
+def parse_board(json: dict) -> BoardState:
+    """Parse the Board response JSON into a typed BoardState. Pure."""
 
-    def get_board(self) -> BoardState:
-        """Fetch current game state from server."""
-        pass
+def parse_observation(board: BoardState) -> Observation:
+    """Build a bot Observation from a parsed board. Pure."""
 
-    def make_move(self, address: int):
-        """Submit a move to the server."""
-        pass
+def parse_result(board: BoardState) -> GameResult:
+    """Translate a terminal board into a GameResult. Pure."""
 
-    def run(self, bot: Bot):
-        """
-        Main game loop:
-        1. Login
-        2. Poll Board endpoint
-        3. When state is WAIT_FOR_YOU:
-           - Parse board response
-           - Convert to engine state
-           - Generate legal actions
-           - Ask bot for action
-           - Convert action to address
-           - Call Move endpoint
-        4. Repeat until game over
-        """
-        pass
+# ---- IO layer: HTTP client (impure, kept at the edge) ----
+
+def login(base_url: str, game_id: str, username: str, password: str,
+          callback_url: str = None) -> str:
+    """Register with the game server. Returns auth token. IO."""
+
+def get_board(base_url: str, token: str) -> BoardState:
+    """Fetch current game state from server. IO."""
+
+def make_move(base_url: str, token: str, address: int | str):
+    """Submit a move to the server. IO."""
+
+# ---- Runner: composes IO + pure functions ----
+
+def run_competition(bot: BotFn,
+                    base_url: str,
+                    game_id: str,
+                    username: str,
+                    password: str,
+                    config: GameConfig) -> GameResult:
+    """
+    Complete game loop — mirrors run_simulation().
+
+    1. Login
+    2. Poll Board endpoint until game starts
+    3. Game loop:
+       a. When state is WAIT_FOR_YOU:
+          - Parse board response (server already rolled dice)
+          - Build Observation from board state
+          - Ask bot for action
+          - Send move to server
+       b. Poll for next state
+    4. Game over — return result
+    """
 ```
+
+### What the competition runner delegates to the server
+
+| Responsibility | Who does it |
+|---------------|-------------|
+| Dice rolls | Server |
+| Turn tracking | Server |
+| Rules enforcement | Server |
+| Win detection | Server |
+| Captures | Server |
+
+### What the competition runner does locally
+
+| Responsibility | Who does it |
+|---------------|-------------|
+| Parse board response | `parse_board` (pure) |
+| Build Observation | `parse_observation` (pure) |
+| Generate legal actions | Runner (or server, if available) |
+| Call `bot(obs)` | Runner |
+| Send move to server | `make_move` (IO) |
 
 ### State Mapping
 
-The adapter maps between competition states and engine states:
+The runner maps between competition states and the bot's view:
 
-| Competition State | Engine State |
-|------------------|--------------|
-| `NONE` | `PRE_GAME` |
-| `WAIT_FOR_START` | `WAITING_TO_START` |
-| `WAIT_FOR_YOU` | `YOUR_TURN` |
-| `WAIT_FOR_MOVE` | `OPPONENTS_TURN` |
-| `END_YOU_WIN` | `GAME_OVER_WIN` |
-| `END_YOU_LOST` | `GAME_OVER_LOSS` |
-| `END_EQUALS` | `GAME_OVER_DRAW` |
-
-### Coordinate Conversion
-
-The adapter handles conversion between:
-- Server's player-relative coordinates (what the API returns)
-- Engine's internal coordinate system
-- Bot's observation coordinates
-
-This is a thin mapping layer. The core engine's coordinate system is the source of truth.
+| Competition State | Bot Sees |
+|------------------|----------|
+| `NONE` | Pre-game (wait) |
+| `WAIT_FOR_START` | Pre-game (wait) |
+| `WAIT_FOR_YOU` | `is_your_turn = True` |
+| `WAIT_FOR_MOVE` | `is_your_turn = False` |
+| `END_YOU_WIN` | `game_over = True, winner = you` |
+| `END_YOU_LOST` | `game_over = True, winner = opponent` |
+| `END_EQUALS` | `game_over = True, winner = None` |
 
 ## 9. Callback Handler
 
-For bots using the callback URL approach:
+For bots using the callback URL approach, the handler is a function:
 
 ```python
-class CallbackHandler:
-    """Handles incoming state change notifications from the server."""
-
-    def handle(self, state: str):
-        """
-        Called when the server POSTs to the callback URL.
-        State is the value that replaced {0} in the callback URL.
-        """
-        if state == "WAIT_FOR_YOU":
-            # Fetch board and make a move
-            board = adapter.get_board()
-            action = bot.choose_action(board)
-            adapter.make_move(action.address)
-        elif state in ("END_YOU_WIN", "END_YOU_LOST", "END_EQUALS"):
-            # Game over
-            pass
+def handle_callback(state: str, bot: BotFn, base_url: str, token: str) -> None:
+    """
+    Called when the server POSTs to the callback URL.
+    State is the value that replaced {0} in the callback URL.
+    """
+    if state == "WAIT_FOR_YOU":
+        # Fetch board and make a move
+        board = get_board(base_url, token)
+        obs = parse_observation(board)
+        action = bot(obs) if obs.legal_actions else None
+        address = obs.own_tokens[action] if action is not None else "0"
+        make_move(base_url, token, address)
+    elif state in ("END_YOU_WIN", "END_YOU_LOST", "END_EQUALS"):
+        # Game over
+        pass
 ```

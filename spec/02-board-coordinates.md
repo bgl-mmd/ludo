@@ -11,7 +11,7 @@ The system uses two coordinate representations:
 
 ## 2. Global Board Layout
 
-The board is a cross-shaped track. Based on the board diagram in the PDF:
+The board is a cross-shaped track. The board diagram shows:
 
 ```
             HOME (Yellow)
@@ -42,23 +42,21 @@ The board is a cross-shaped track. Based on the board diagram in the PDF:
      ╚═══════════════════════════════════╝
 ```
 
-### Simplified global cell map (from diagram):
+### Simplified global cell map:
 
-The 40 shared track cells form a loop. The44 total labeled cells are:
+The 40 shared track cells form a loop. The 44 total labeled cells are:
 
 - **ID:0** — Home yard (4 tokens per player start here)
 - **ID:1 through ID:40** — Shared track cells (circular)
 - **ID:41 through ID:44** — Home stretch cells (colored by player)
 
-### Direction of travel (from arrows):
+### Direction of travel:
 
 The arrows on the board show the path proceeds:
 - Left to right across the top arm (cells 1→5)
 - Top to bottom down the right arm (cells 9→5, then 15→19)
 - Right to left across the bottom arm (cells 19→21, then 25→35)
 - Bottom to top up the left arm (cells 35→31, then 29→1)
-
-**Source:** [EXPLICIT] Board diagram with numbered cells and directional arrows.
 
 ## 3. Player-Relative Coordinates (Competition View)
 
@@ -69,7 +67,7 @@ Each player sees the board from their own perspective:
 | Player A | 1 | 40 | 1 | 40 |
 | Player B | 21 | 20 | 21 | 20 |
 
-**Source:** [EXPLICIT] Board response example shows:
+Example Board response:
 ```json
 {
   "name": "RayanBotTeam1",
@@ -135,7 +133,7 @@ For Player B (begin=21):
 
 ## 5. Home Stretch Representation
 
-Each player has4 home stretch cells (41–44 in player-relative coordinates). In global coordinates, these are mapped to specific cells.
+Each player has 4 home stretch cells (41–44 in player-relative coordinates). In global coordinates, these are mapped to specific cells.
 
 **Open question:** How are global cell IDs 41–44 mapped to players? The diagram shows:
 - Yellow home stretch: global cells near the yellow player's end
@@ -154,16 +152,12 @@ Each player has4 home stretch cells (41–44 in player-relative coordinates). In
 | `41..44` | Token is in player's home stretch |
 | `> 44` | Token has finished (reached final destination) |
 
-**Source:** [EXPLICIT] Board response example shows token values of 0, 14, 20, 41, 42, 43.
-
 ## 7. Collision Rules (Coordinate Level)
 
 Two tokens cannot occupy the same cell, with these rules:
 
 1. **Opponent on cell:** Moving onto a cell occupied by an opponent sends the opponent's token back to 0.
 2. **Same player on cell:** A token cannot move to a cell occupied by another token of the same player.
-
-**Source:** [EXPLICIT] "در هر خانه فقط و فقط یک مهره قرار خواهد گرفت"
 
 ## 8. Invariants
 

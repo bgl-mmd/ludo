@@ -2,7 +2,7 @@
 
 ## 1. Competition States
 
-These are the states defined by the competition PDF. All are [EXPLICIT].
+These are the states defined by the competition specification.
 
 | State | Description | Who can act |
 |-------|-------------|-------------|
@@ -13,8 +13,6 @@ These are the states defined by the competition PDF. All are [EXPLICIT].
 | `END_YOU_WIN` | Game over, your bot won | Terminal |
 | `END_YOU_LOST` | Game over, opponent bot won | Terminal |
 | `END_EQUALS` | Game ended as a draw (not common in 1405) | Terminal |
-
-**Source:** [EXPLICIT] "کدهای وضعیت بازی" table in the PDF.
 
 ## 2. State Transitions
 
@@ -65,7 +63,7 @@ These are the states defined by the competition PDF. All are [EXPLICIT].
 2. When enough bots are registered (minimum 2), state → `WAIT_FOR_START`.
 3. When supervisor approves, dice is rolled for the first player. State → `WAIT_FOR_YOU` or `WAIT_FOR_MOVE`.
 
-**[DESIGN]** First player determination: random or fixed order? The PDF does not specify.
+**[DESIGN]** First player determination: random or fixed order? Not specified.
 
 ### 3.2 Normal Turn (No 6)
 
@@ -84,10 +82,10 @@ These are the states defined by the competition PDF. All are [EXPLICIT].
 4. **After the move, the same player gets another turn** (dice is rolled again).
 5. State stays `WAIT_FOR_YOU` for the same player.
 6. **If the second consecutive dice is also 6:** the extra turn is NOT granted. Turn passes to opponent.
-7. **[DESIGN]** What happens on a third consecutive 6? The PDF only mentions "second consecutive 6 has no reward." Options:
+7. **[DESIGN]** What happens on a third consecutive 6? The spec only mentions "second consecutive 6 has no reward." Options:
    - Third 6 is treated like a normal roll (most likely)
    - Third 6 also loses the turn
-   - The PDF implies only one replay is ever granted per "sequence" (i.e., max 2 rolls per turn: first 6 gets replay, second 6 does not)
+   - The spec implies only one replay is ever granted per "sequence" (i.e., max 2 rolls per turn: first 6 gets replay, second 6 does not)
 
 ### 3.4 No Valid Move
 

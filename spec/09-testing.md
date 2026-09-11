@@ -195,20 +195,20 @@ def winning_state():
 
 ### 3.2 Deterministic Dice
 
-For testing, use a controlled RNG:
+For testing, use a controlled RNG source — a generator function:
 
 ```python
-class FixedDice:
-    """Dice that returns pre-determined values."""
-    def __init__(self, values: list[int]):
-        self.values = values
-        self.index = 0
+def fixed_dice(values: list[int]) -> Iterator[int]:
+    """Dice that yields pre-determined values, cycling endlessly."""
+    while True:
+        for val in values:
+            yield val
 
-    def roll(self) -> int:
-        val = self.values[self.index]
-        self.index = (self.index + 1) % len(self.values)
-        return val
+# Usage: pass an RNG-like object wrapping the iterator, or inject into the runner.
+dice = fixed_dice([6, 3, 1, 5])
 ```
+
+Because the engine's `roll_dice(state, rng)` takes the RNG as a parameter, tests can inject a deterministic source without any class machinery.
 
 ## 4. Coverage Targets
 
@@ -220,7 +220,7 @@ class FixedDice:
 | Legal action generation | 100% |
 | Bot interface | 90% |
 | Simulation | 80% |
-| Competition adapter | 80% |
+| Competition runner | 80% |
 
 ## 5. Test Execution
 
