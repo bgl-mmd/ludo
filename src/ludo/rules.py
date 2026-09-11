@@ -64,6 +64,39 @@ def check_win(state: GameState, player: int, config: GameConfig) -> bool:
     return all(start <= pos <= end for pos in state.tokens[player])
 
 
+def get_legal_actions(state: GameState, config: GameConfig) -> tuple[int, ...]:
+    """Generate all legal token indices for the current player and dice.
+
+    Reads `state.current_player` and `state.dice_value`. An empty tuple
+    means "no valid move" (`Move(0)` / action `None`).
+    """
+    player = state.current_player
+    if state.dice_value is None:
+        return ()
+    actions = []
+    for token_index in range(len(state.tokens[player])):
+        dest = compute_destination(state, player, token_index, config)
+        if dest is None:
+            continue
+        if get_occupant(state, player, dest, config) == SAME_PLAYER:
+            continue
+        actions.append(token_index)
+    return tuple(actions)
+
+
+def is_valid_action(
+    state: GameState, action: int | None, config: GameConfig
+) -> bool:
+    """Check if an action (token index) is legal given the current state.
+
+    `None` ("no valid move") is valid exactly when no legal moves exist.
+    """
+    legal = get_legal_actions(state, config)
+    if action is None:
+        return not legal
+    return action in legal
+
+
 def is_game_over(state: GameState) -> bool:
     if state.game_over:
         return True
