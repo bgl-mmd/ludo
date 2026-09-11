@@ -1,9 +1,9 @@
+import logging
 import time
 
-from competition.client import get_board, login, make_move
+from competition.client import CompetitionError, get_board, login, make_move
 from competition.parsing import (
     action_to_address,
-    parse_board,
     parse_observation,
     parse_result,
 )
@@ -12,6 +12,29 @@ from ludo.model import GameConfig, GameResult
 
 END_STATES = ("END_YOU_WIN", "END_YOU_LOST", "END_EQUALS")
 POLL_INTERVAL = 1.0
+
+logger = logging.getLogger(__name__)
+
+
+def _player_id(board, username: str) -> int:
+    for index, user in enumerate(board.users):
+        if user.name == username:
+            return index
+    raise CompetitionError(
+        f"username {username!r} not found among board users {[u.name for u in board.users]}"
+    )
+
+
+def _fetch_board(base_url: str, token: str):
+    board = get_board(base_url, token)
+    logger.info(
+        "gamestate received: game_id=%s state=%s dice=%s users=%s",
+        board.game_id,
+        board.state,
+        board.dice,
+        [(user.name, user.tokens) for user in board.users],
+    )
+    return board
 
 
 def run_competition(
@@ -30,28 +53,76 @@ def run_competition(
     Polls the board every poll_interval seconds to limit server traffic.
     """
     token = login(base_url, game_id, username, password)
-    board = get_board(base_url, token)
+    try:
+        board = _fetch_board(base_url, token)
+    except CompetitionError as error:
+        logger.error("failed to fetch initial board: game_id=%s error=%s", game_id, error)
+        raise
+    player_id = _player_id(board, username)
     while board.state in ("NONE", "WAIT_FOR_START"):
         time.sleep(poll_interval)
-        board = get_board(base_url, token)
+        try:
+            board = _fetch_board(base_url, token)
+        except CompetitionError as error:
+            logger.error(
+                "failed to poll board: game_id=%s last_board=%s error=%s",
+                game_id,
+                board,
+                error,
+            )
+            raise
     while board.state not in END_STATES:
         if board.state == "WAIT_FOR_YOU":
-            obs = parse_observation(board)
+            obs = parse_observation(board, player_id)
             action = bot(obs) if obs.legal_actions else None
             address = action_to_address(obs.own_tokens, action)
-            make_move(base_url, token, address)
+            logger.info("making move: address=%s", address)
+            try:
+                make_move(base_url, token, address)
+            except CompetitionError as error:
+                logger.error(
+                    "failed to make move: address=%s last_board=%s error=%s",
+                    address,
+                    board,
+                    error,
+                )
+                raise
         time.sleep(poll_interval)
-        board = get_board(base_url, token)
-    return parse_result(board)
+        try:
+            board = _fetch_board(base_url, token)
+        except CompetitionError as error:
+            logger.error(
+                "failed to poll board: game_id=%s last_board=%s error=%s",
+                game_id,
+                board,
+                error,
+            )
+            raise
+    return parse_result(board, player_id)
 
 
-def handle_callback(state: str, bot: BotFn, base_url: str, token: str) -> None:
+def handle_callback(state: str, bot: BotFn, base_url: str, token: str, username: str) -> None:
     if state == "WAIT_FOR_YOU":
-        board = get_board(base_url, token)
-        obs = parse_observation(board)
+        try:
+            board = _fetch_board(base_url, token)
+        except CompetitionError as error:
+            logger.error("callback failed to fetch board: error=%s", error)
+            raise
+        player_id = _player_id(board, username)
+        obs = parse_observation(board, player_id)
         action = bot(obs) if obs.legal_actions else None
         address = action_to_address(obs.own_tokens, action)
-        make_move(base_url, token, address)
+        logger.info("making move: address=%s", address)
+        try:
+            make_move(base_url, token, address)
+        except CompetitionError as error:
+            logger.error(
+                "callback failed to make move: address=%s last_board=%s error=%s",
+                address,
+                board,
+                error,
+            )
+            raise
     elif state in END_STATES:
         pass
 

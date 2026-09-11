@@ -1,4 +1,5 @@
 import json
+import logging
 import urllib.error
 import urllib.request
 from unittest import mock
@@ -180,3 +181,14 @@ class TestErrorHandling:
             mock_urlopen.return_value = FakeResponse(b"", status=204)
             with pytest.raises(CompetitionError):
                 login("https://rbc.sysx.ir", "game-room-1", "team", "pw")
+
+
+class TestRequestLogging:
+    def test_post_logs_request_and_response_with_elapsed(self, caplog) -> None:
+        with mock.patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.return_value = FakeResponse(json.dumps(BOARD_JSON).encode())
+            with caplog.at_level(logging.INFO, logger="competition.client"):
+                get_board("https://rbc.sysx.ir", TOKEN)
+        messages = caplog.messages
+        assert any(m.startswith("request: POST /api/v1/Board") for m in messages)
+        assert any("response: /api/v1/Board status=200 elapsed=" in m for m in messages)

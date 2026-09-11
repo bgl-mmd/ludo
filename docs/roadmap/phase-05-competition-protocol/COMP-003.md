@@ -11,8 +11,8 @@ Play a full game against the real server with the same bot interface as the simu
 
 ## Scope
 
-- `run_competition(bot, base_url, game_id, username, password, config) -> GameResult`: login, poll until `WAIT_FOR_YOU`, build observation, call bot, convert to address, `make_move`, poll, terminate on `END_*`.
-- `handle_callback(state, bot, base_url, token)` for callback-based play.
+- `run_competition(bot, base_url, game_id, username, password, config) -> GameResult`: login, poll until `WAIT_FOR_YOU`, build observation (for the logged-in user's slot), call bot, convert to address, `make_move`, poll, terminate on `END_*`.
+- `handle_callback(state, bot, base_url, token, username)` for callback-based play.
 
 ## Out of scope
 

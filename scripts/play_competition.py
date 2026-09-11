@@ -8,6 +8,7 @@ Usage:
 """
 
 import argparse
+import logging
 
 from ludo.bots import make_greedy_bot, make_random_bot
 from ludo.model import GameConfig
@@ -29,6 +30,8 @@ def main() -> None:
     parser.add_argument("--players", type=int, default=2)
     parser.add_argument("--poll-interval", type=float, default=1.0)
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO)
 
     result = run_competition(
         bot=BOTS[args.bot](),

@@ -1,5 +1,9 @@
+import logging
 from unittest import mock
 
+import pytest
+
+from competition.client import CompetitionError
 from competition.parsing import (
     action_to_address,
     parse_board,
@@ -11,7 +15,7 @@ from ludo.model import GameConfig, GameResult
 
 BASE_URL = "https://rbc.sysx.ir"
 GAME_ID = "game-room-1"
-USERNAME = "RayanBotTeam"
+USERNAME = "RayanBotTeam1"
 PASSWORD = "123"
 TOKEN = "token-123"
 
@@ -98,6 +102,103 @@ class TestRunCompetition:
         assert mock_sleep.call_count == 2
         assert mock_sleep.call_args_list == [mock.call(2.0), mock.call(2.0)]
 
+    def test_move_failure_logs_board_and_address_then_reraises(self, caplog) -> None:
+        boards = [
+            _board("WAIT_FOR_YOU"),
+            _board("END_YOU_WIN"),
+        ]
+        bot = make_greedy_bot()
+        obs = parse_observation(_board("WAIT_FOR_YOU"), player_id=0)
+        address = action_to_address(obs.own_tokens, bot(obs))
+        error = CompetitionError("HTTP 500 from /api/v1/Move: Server Error")
+        with caplog.at_level(logging.ERROR, logger="competition.runner"):
+            with mock.patch("competition.runner.login", return_value=TOKEN), mock.patch(
+                "competition.runner.get_board", side_effect=boards
+            ), mock.patch(
+                "competition.runner.make_move", side_effect=error
+            ):
+                with pytest.raises(CompetitionError):
+                    run_competition(
+                        bot, BASE_URL, GAME_ID, USERNAME, PASSWORD, GameConfig(), poll_interval=0
+                    )
+        assert caplog.messages, "expected an error log record"
+        record = caplog.records[0]
+        assert record.getMessage().startswith("failed to make move:")
+        assert "address=%s" % address in record.getMessage()
+        assert "game-room-1" in record.getMessage()
+        assert "WAIT_FOR_YOU" in record.getMessage()
+
+    def test_board_poll_failure_logs_last_board_then_reraises(self, caplog) -> None:
+        last_board = _board("WAIT_FOR_MOVE")
+        bot = make_greedy_bot()
+        error = CompetitionError("HTTP 500 from /api/v1/Board: Server Error")
+        with caplog.at_level(logging.ERROR, logger="competition.runner"):
+            with mock.patch("competition.runner.login", return_value=TOKEN), mock.patch(
+                "competition.runner.get_board", side_effect=[last_board, error]
+            ), mock.patch("competition.runner.make_move"):
+                with pytest.raises(CompetitionError):
+                    run_competition(
+                        bot, BASE_URL, GAME_ID, USERNAME, PASSWORD, GameConfig(), poll_interval=0
+                    )
+        assert caplog.messages, "expected an error log record"
+        record = caplog.records[0]
+        assert record.getMessage().startswith("failed to poll board:")
+        assert "game-room-1" in record.getMessage()
+        assert "WAIT_FOR_MOVE" in record.getMessage()
+
+    def test_logged_in_user_not_first_in_users_list(self) -> None:
+        boards = [
+            parse_board(
+                {
+                    "gameID": GAME_ID,
+                    "state": "WAIT_FOR_YOU",
+                    "dice": 1,
+                    "users": [
+                        {"name": "randombot1", "begin": 21, "end": 20, "tokens": [0, 0, 0, 0]},
+                        {"name": "greedybot1", "begin": 1, "end": 40, "tokens": [1, 0, 0, 0]},
+                    ],
+                }
+            ),
+            parse_board(
+                {
+                    "gameID": GAME_ID,
+                    "state": "END_YOU_WIN",
+                    "dice": 1,
+                    "users": [
+                        {"name": "randombot1", "begin": 21, "end": 20, "tokens": [0, 0, 0, 0]},
+                        {"name": "greedybot1", "begin": 1, "end": 40, "tokens": [2, 0, 0, 0]},
+                    ],
+                }
+            ),
+        ]
+        bot = make_greedy_bot()
+        with mock.patch("competition.runner.login", return_value=TOKEN), mock.patch(
+            "competition.runner.get_board", side_effect=boards
+        ), mock.patch("competition.runner.make_move") as mock_make_move:
+            result = run_competition(
+                bot, BASE_URL, GAME_ID, "greedybot1", PASSWORD, GameConfig(), poll_interval=0
+            )
+        assert mock_make_move.call_count == 1
+        assert mock_make_move.call_args == mock.call(BASE_URL, TOKEN, 1)
+        assert result.winner == 1
+
+    def test_logs_gamestate_and_move(self, caplog) -> None:
+        boards = [
+            _board("WAIT_FOR_YOU"),
+            _board("END_YOU_WIN"),
+        ]
+        bot = make_greedy_bot()
+        with caplog.at_level(logging.INFO, logger="competition.runner"):
+            with mock.patch("competition.runner.login", return_value=TOKEN), mock.patch(
+                "competition.runner.get_board", side_effect=boards
+            ), mock.patch("competition.runner.make_move"):
+                run_competition(
+                    bot, BASE_URL, GAME_ID, USERNAME, PASSWORD, GameConfig(), poll_interval=0
+                )
+        messages = caplog.messages
+        assert any(m.startswith("gamestate received:") for m in messages)
+        assert any(m.startswith("making move: address=") for m in messages)
+
 
 class TestHandleCallback:
     def test_callback_wait_for_you_moves(self) -> None:
@@ -105,7 +206,7 @@ class TestHandleCallback:
         with mock.patch(
             "competition.runner.get_board", return_value=_board("WAIT_FOR_YOU")
         ) as mock_get_board, mock.patch("competition.runner.make_move") as mock_make_move:
-            handle_callback("WAIT_FOR_YOU", bot, BASE_URL, TOKEN)
+            handle_callback("WAIT_FOR_YOU", bot, BASE_URL, TOKEN, USERNAME)
         assert mock_get_board.call_count == 1
         obs = parse_observation(_board("WAIT_FOR_YOU"), player_id=0)
         address = action_to_address(obs.own_tokens, bot(obs))
@@ -118,7 +219,7 @@ class TestHandleCallback:
             with mock.patch("competition.runner.get_board") as mock_get_board, mock.patch(
                 "competition.runner.make_move"
             ) as mock_make_move:
-                handle_callback(state, bot, BASE_URL, TOKEN)
+                handle_callback(state, bot, BASE_URL, TOKEN, USERNAME)
             assert mock_get_board.call_count == 0
             assert mock_make_move.call_count == 0
 

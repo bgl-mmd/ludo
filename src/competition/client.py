@@ -1,12 +1,16 @@
 import json
+import logging
+import time
 import urllib.error
 import urllib.request
 
 from competition.parsing import BoardState, parse_board
 
-TIMEOUT = 30
+TIMEOUT = None
 BOARD_ENDPOINT = "/api/v1/Board"
 MODEL = "ludo"
+
+logger = logging.getLogger(__name__)
 
 
 class CompetitionError(Exception):
@@ -25,6 +29,8 @@ def _post(base_url: str, endpoint: str, payload: dict) -> dict | None:
             "Content-Length": str(len(body)),
         },
     )
+    start = time.monotonic()
+    logger.info("request: POST %s", endpoint)
     try:
         response = urllib.request.urlopen(request, timeout=TIMEOUT)
     except urllib.error.HTTPError as error:
@@ -35,6 +41,8 @@ def _post(base_url: str, endpoint: str, payload: dict) -> dict | None:
         raise CompetitionError(f"Request to {endpoint} failed: {error.reason}") from error
     status = getattr(response, "status", 200)
     data = response.read()
+    elapsed_ms = (time.monotonic() - start) * 1000
+    logger.info("response: %s status=%s elapsed=%.0fms", endpoint, status, elapsed_ms)
     if status == 204 or not data:
         return None
     if status != 200:
