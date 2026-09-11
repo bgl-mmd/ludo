@@ -29,6 +29,11 @@ def main() -> None:
     parser.add_argument("--bot", choices=BOTS, default="greedy")
     parser.add_argument("--players", type=int, default=2)
     parser.add_argument("--poll-interval", type=float, default=1.0)
+    parser.add_argument(
+        "--callback-url",
+        default=None,
+        help="Callback URL sent in the login request; {0} is replaced by the game state",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
@@ -41,6 +46,7 @@ def main() -> None:
         password=args.password,
         config=GameConfig(num_players=args.players),
         poll_interval=args.poll_interval,
+        callback_url=args.callback_url,
     )
     print(
         f"game over: winner=p{result.winner} turns={result.turn_count} "

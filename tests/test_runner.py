@@ -51,7 +51,9 @@ class TestRunCompetition:
                 bot, BASE_URL, GAME_ID, USERNAME, PASSWORD, GameConfig(), poll_interval=0
             )
         assert mock_login.call_count == 1
-        assert mock_login.call_args == mock.call(BASE_URL, GAME_ID, USERNAME, PASSWORD)
+        assert mock_login.call_args == mock.call(
+            BASE_URL, GAME_ID, USERNAME, PASSWORD, None
+        )
         assert mock_get_board.call_count == 5
         obs = parse_observation(_board("WAIT_FOR_YOU"), player_id=0)
         address = action_to_address(obs.own_tokens, bot(obs))
@@ -181,6 +183,27 @@ class TestRunCompetition:
         assert mock_make_move.call_count == 1
         assert mock_make_move.call_args == mock.call(BASE_URL, TOKEN, 1)
         assert result.winner == 1
+
+    def test_passes_callback_url_to_login(self) -> None:
+        boards = [_board("END_YOU_WIN")]
+        bot = make_greedy_bot()
+        callback_url = "http://mybot.local/cb?state={0}"
+        with mock.patch("competition.runner.login", return_value=TOKEN) as mock_login, mock.patch(
+            "competition.runner.get_board", side_effect=boards
+        ):
+            run_competition(
+                bot,
+                BASE_URL,
+                GAME_ID,
+                USERNAME,
+                PASSWORD,
+                GameConfig(),
+                poll_interval=0,
+                callback_url=callback_url,
+            )
+        assert mock_login.call_args == mock.call(
+            BASE_URL, GAME_ID, USERNAME, PASSWORD, callback_url
+        )
 
     def test_logs_gamestate_and_move(self, caplog) -> None:
         boards = [

@@ -45,6 +45,7 @@ def run_competition(
     password: str,
     config: GameConfig,
     poll_interval: float = POLL_INTERVAL,
+    callback_url: str | None = None,
 ) -> GameResult:
     """Run a complete game against the server.
 
@@ -52,7 +53,7 @@ def run_competition(
     run_simulation but is unused: the server owns the game rules.
     Polls the board every poll_interval seconds to limit server traffic.
     """
-    token = login(base_url, game_id, username, password)
+    token = login(base_url, game_id, username, password, callback_url)
     try:
         board = _fetch_board(base_url, token)
     except CompetitionError as error:
