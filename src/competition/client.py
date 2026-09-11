@@ -4,7 +4,9 @@ import urllib.request
 
 from competition.parsing import BoardState, parse_board
 
-TIMEOUT = 10
+TIMEOUT = 30
+BOARD_ENDPOINT = "/api/v1/Board"
+MODEL = "ludo"
 
 
 class CompetitionError(Exception):
@@ -62,7 +64,7 @@ def login(
 
 
 def get_board(base_url: str, token: str) -> BoardState:
-    response = _post(base_url, "/api/v1/Borad", {"token": token})
+    response = _post(base_url, BOARD_ENDPOINT, {"token": token, "model": MODEL})
     if response is None:
         raise CompetitionError("Board returned an empty response")
     return parse_board(response)

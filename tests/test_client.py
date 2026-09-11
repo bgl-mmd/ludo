@@ -97,11 +97,11 @@ class TestBoardRequestFormat:
             mock_urlopen.return_value = FakeResponse(json.dumps(BOARD_JSON).encode())
             board = get_board("https://rbc.sysx.ir", TOKEN)
         request = _captured_request(mock_urlopen)
-        assert request.full_url == "https://rbc.sysx.ir/api/v1/Borad"
+        assert request.full_url == "https://rbc.sysx.ir/api/v1/Board"
         assert request.get_method() == "POST"
         assert _header(request, "Content-Type") == "application/json"
         assert _header(request, "Accept") == "application/json"
-        assert _request_body(request) == {"token": TOKEN}
+        assert _request_body(request) == {"token": TOKEN, "model": "ludo"}
         assert isinstance(board, BoardState)
         assert board.game_id == "game-room-1"
         assert board.state == "WAIT_FOR_YOU"
@@ -164,7 +164,7 @@ class TestErrorHandling:
     def test_http_error_raises_competition_error(self) -> None:
         with mock.patch("urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = urllib.error.HTTPError(
-                "https://rbc.sysx.ir/api/v1/Borad", 500, "Server Error", {}, None
+                "https://rbc.sysx.ir/api/v1/Board", 500, "Server Error", {}, None
             )
             with pytest.raises(CompetitionError):
                 get_board("https://rbc.sysx.ir", TOKEN)
