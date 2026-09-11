@@ -1,4 +1,44 @@
+from ludo.coordinates import global_to_player, player_to_global
 from ludo.model import GameConfig, GameState
+
+SAME_PLAYER = "SAME_PLAYER"
+OPPONENT = "OPPONENT"
+
+
+def get_occupant(
+    state: GameState, player: int, position: int, config: GameConfig
+) -> str | None:
+    if position == 0:
+        return None
+    if position in state.tokens[player]:
+        return SAME_PLAYER
+    if position > config.board_size:
+        return None
+    global_pos = player_to_global(position, player, config)
+    for opponent in range(config.num_players):
+        if opponent == player:
+            continue
+        opp_pos = global_to_player(global_pos, opponent, config)
+        if opp_pos in state.tokens[opponent]:
+            return OPPONENT
+    return None
+
+
+def check_capture(
+    state: GameState, player: int, destination: int, config: GameConfig
+) -> int | None:
+    if destination == 0 or destination > config.board_size:
+        return None
+    if destination in state.tokens[player]:
+        return None
+    global_pos = player_to_global(destination, player, config)
+    for opponent in range(config.num_players):
+        if opponent == player:
+            continue
+        opp_pos = global_to_player(global_pos, opponent, config)
+        if opp_pos in state.tokens[opponent]:
+            return opponent
+    return None
 
 
 def compute_destination(
