@@ -14,6 +14,41 @@ Dependency-ordered plan. Each task is one focused coding-agent session.
 3. A task is ready when all tasks in its `Depends on` are complete.
 4. After each task, run its tests (`pytest tests/`). See `docs/architecture.md` §10.
 
+## Parallel execution (waves)
+
+Tasks form a dependency DAG: a task is ready when all tasks in its `Depends
+on` are complete. To parallelize safely, group tasks into **waves** — all
+tasks in a wave are independent of each other and may be implemented
+concurrently. The task files themselves are unchanged; this schedule only
+tells you which waves you can run simultaneously.
+
+| Wave | Tasks (run in parallel in one wave)                                   |
+| ---- | -------------------------------------------------------------------- |
+| 0    | FOUND-001                                                            |
+| 1    | DOMAIN-001, QUAL-002                                                 |
+| 2    | DOMAIN-002, RULE-001, RULE-002, RULE-005, RULE-006, ENGINE-001, BOT-001 |
+| 3    | RULE-003                                                             |
+| 4    | RULE-004                                                             |
+| 5    | ENGINE-002, OBS-001                                                  |
+| 6    | ENGINE-003, COMP-001                                                 |
+| 7    | SIM-001, COMP-002                                                    |
+| 8    | SIM-002, SIM-003, SIM-004, QUAL-001, COMP-003                        |
+
+Wave 0 is already complete in this repo. Start wave 1 and proceed wave by
+wave; never start wave *n* until all tasks in wave *n-1* are done and their
+tests pass.
+
+Session recipe per wave (for agent spawns):
+
+1. Delegate one builder subagent per task in the wave (single message,
+   concurrent calls).
+2. Instruct each builder to read `docs/implementation-roadmap.md` and its own
+   task file first, follow repo conventions, and not touch `pyproject.toml`
+   or `tests/conftest.py` (owned by FOUND-001) unless its task requires it.
+3. Run `pytest tests/` per task, then the full suite after the wave.
+4. Delegate one reviewer subagent per task to verify acceptance criteria.
+5. Re-delegate any failed task before starting the next wave.
+
 ## Vertical slice
 
 Validate the architecture early:
