@@ -1,6 +1,6 @@
 # Ludo
 
-## `play_competition.py` — Polling Mode
+## `play_competition.py` — Polling Mode (Recommended)
 
 The bot polls the server at a fixed interval for game state updates.
 
