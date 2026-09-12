@@ -19,6 +19,7 @@ Runs games locally with `run_simulation` / `run_batch` (SIM-001/002) and prints
 ```
 PYTHONPATH=src python3 scripts/play.py                    # one greedy vs random game
 PYTHONPATH=src python3 scripts/play.py --bot0 greedy --bot1 greedy
+PYTHONPATH=src python3 scripts/play.py --bot0 mcts --bot1 random --iterations 200
 PYTHONPATH=src python3 scripts/play.py --batch --games 50 --workers 4 --seed 0
 ```
 
@@ -26,8 +27,9 @@ PYTHONPATH=src python3 scripts/play.py --batch --games 50 --workers 4 --seed 0
 
 | Option          | Default | Description                                        |
 | --------------- | ------- | -------------------------------------------------- |
-| `--bot0`        | `greedy`| Bot factory for player 0 (`greedy` or `random`)    |
-| `--bot1`        | `random`| Bot factory for player 1 (`greedy` or `random`)    |
+| `--bot0`        | `greedy`| Bot factory for player 0 (`greedy`, `random`, `mcts`) |
+| `--bot1`        | `random`| Bot factory for player 1 (`greedy`, `random`, `mcts`) |
+| `--iterations`  | `200`   | MCTS search iterations (only used for `mcts` bots) |
 | `--seed`        | `42`    | RNG seed; also the first seed in batch mode        |
 | `--players`     | `2`     | Number of players in the game                      |
 | `--batch`       | off     | Run a batch of games instead of a single game      |
@@ -72,6 +74,10 @@ PYTHONPATH=src python3 scripts/play_competition.py \
 PYTHONPATH=src python3 scripts/play_competition.py \
     --base-url http://localhost:8000 --game-id game-room-1 \
     --username MyTeam --password secret --bot random
+
+PYTHONPATH=src python3 scripts/play_competition.py \
+    --game-id game-room-1 --username MyTeam --password secret \
+    --bot mcts --iterations 200
 ```
 
 ### Options
@@ -82,7 +88,9 @@ PYTHONPATH=src python3 scripts/play_competition.py \
 | `--game-id`     | required               | Game room name (must exist on the server)          |
 | `--username`    | required               | Bot team name                                      |
 | `--password`    | required               | Bot password                                       |
-| `--bot`         | `greedy`               | Bot used for this player (`greedy` or `random`)    |
+| `--bot`         | `greedy`               | Bot used for this player (`greedy`, `random`, `mcts`) |
+| `--iterations`  | `200`                  | MCTS search iterations (only used for `mcts`)      |
+| `--seed`        | random                 | RNG seed for the MCTS bot; unset = fresh entropy each game |
 | `--players`     | `2`                    | Number of players in the game                      |
 | `--poll-interval`| `1.0`                 | Seconds between `get_board` polls                  |
 

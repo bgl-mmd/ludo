@@ -10,7 +10,7 @@ Usage:
 import argparse
 import logging
 
-from ludo.bots import make_greedy_bot, make_random_bot
+from ludo.bots import make_greedy_bot, make_mcts_bot, make_random_bot
 from ludo.model import GameConfig
 from competition.runner import run_competition
 
@@ -26,7 +26,9 @@ def main() -> None:
     parser.add_argument("--game-id", required=True)
     parser.add_argument("--username", required=True)
     parser.add_argument("--password", required=True)
-    parser.add_argument("--bot", choices=BOTS, default="greedy")
+    parser.add_argument("--bot", choices=[*BOTS, "mcts"], default="greedy")
+    parser.add_argument("--iterations", type=int, default=200)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--players", type=int, default=2)
     parser.add_argument("--poll-interval", type=float, default=1.0)
     parser.add_argument(
@@ -38,8 +40,13 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO)
 
+    if args.bot == "mcts":
+        bot = make_mcts_bot(iterations=args.iterations, seed=args.seed)
+    else:
+        bot = BOTS[args.bot]()
+
     result = run_competition(
-        bot=BOTS[args.bot](),
+        bot=bot,
         base_url=args.base_url,
         game_id=args.game_id,
         username=args.username,

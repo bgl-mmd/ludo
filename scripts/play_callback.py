@@ -14,7 +14,7 @@ import argparse
 import logging
 from urllib.parse import urlparse
 
-from ludo.bots import make_greedy_bot, make_random_bot
+from ludo.bots import make_greedy_bot, make_mcts_bot, make_random_bot
 from ludo.model import GameConfig
 from competition.callback_server import run_callback_server
 from competition.client import login
@@ -31,7 +31,9 @@ def main() -> None:
     parser.add_argument("--game-id", required=True)
     parser.add_argument("--username", required=True)
     parser.add_argument("--password", required=True)
-    parser.add_argument("--bot", choices=BOTS, default="greedy")
+    parser.add_argument("--bot", choices=[*BOTS, "mcts"], default="greedy")
+    parser.add_argument("--iterations", type=int, default=200)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument(
         "--callback-url",
         required=True,
@@ -48,12 +50,17 @@ def main() -> None:
     if "{0}" not in args.callback_url:
         parser.error("--callback-url must contain the {0} placeholder (replaced by the game state)")
 
+    if args.bot == "mcts":
+        bot = make_mcts_bot(iterations=args.iterations, seed=args.seed)
+    else:
+        bot = BOTS[args.bot]()
+
     config = GameConfig(num_players=args.players)
     token = login(args.base_url, args.game_id, args.username, args.password, args.callback_url)
     result = run_callback_server(
         host=args.host,
         port=port,
-        bot=BOTS[args.bot](),
+        bot=bot,
         base_url=args.base_url,
         token=token,
         username=args.username,
