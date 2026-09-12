@@ -35,12 +35,12 @@ The server POSTs the game state to your callback URL. This script runs a small H
 
 **Linux (source):**
 ```bash
-PYTHONPATH=src python3 scripts/play_callback.py --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gs={0}" --bot mcts --iterations 500
+PYTHONPATH=src python3 scripts/play_callback.py --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gamestate={0}" --bot mcts --iterations 500
 ```
 
 **Windows (executable):**
 ```powershell
-play_callback.exe --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gs={0}" --bot mcts --iterations 500
+play_callback.exe --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gamestate={0}" --bot mcts --iterations 500
 ```
 
 | Flag | Default | Description |
