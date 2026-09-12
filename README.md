@@ -20,9 +20,9 @@ play_competition.exe --game-id game06 --username bot1 --password 123 --bot mcts 
 | `--game-id` | required | Room name |
 | `--username` | required | Your team name |
 | `--password` | required | Room password |
-| `--bot` | `greedy` | `random`, `greedy`, or `mcts` |
-| `--iterations` | `200` | MCTS iterations (only for `mcts`) |
-| `--seed` | `None` | Random seed (only for `mcts`) |
+| `--bot` | `greedy` | `random`, `greedy`, `mcts`, or `evasive_mcts` |
+| `--iterations` | `200` | MCTS iterations (only for `mcts`/`evasive_mcts`) |
+| `--seed` | `None` | Random seed (only for `mcts`/`evasive_mcts`) |
 | `--players` | `2` | Number of players |
 | `--poll-interval` | `1.0` | Seconds between polls |
 | `--callback-url` | `None` | Optional callback URL sent with login |
@@ -51,9 +51,9 @@ play_callback.exe --game-id game06 --username bot1 --password 123 --callback-url
 | `--password` | required | Room password |
 | `--callback-url` | required | URL with `{0}` placeholder (replaced by gamestate) |
 | `--host` | `0.0.0.0` | Local bind address |
-| `--bot` | `greedy` | `random`, `greedy`, or `mcts` |
-| `--iterations` | `200` | MCTS iterations |
-| `--seed` | `None` | Random seed |
+| `--bot` | `greedy` | `random`, `greedy`, `mcts`, or `evasive_mcts` |
+| `--iterations` | `200` | MCTS iterations (only for `mcts`/`evasive_mcts`) |
+| `--seed` | `None` | Random seed (only for `mcts`/`evasive_mcts`) |
 | `--players` | `2` | Number of players |
 
 > The `{0}` in `--callback-url` is required — the server replaces it with the encoded game state. The port in the callback URL determines which port the local server listens on (default `8000`).

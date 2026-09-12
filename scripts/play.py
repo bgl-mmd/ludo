@@ -10,7 +10,12 @@ Usage:
 import argparse
 import functools
 
-from ludo.bots import make_greedy_bot, make_mcts_bot, make_random_bot
+from ludo.bots import (
+    make_greedy_bot,
+    make_mcts_bot,
+    make_mcts_evasive_bot,
+    make_random_bot,
+)
 from ludo.model import GameConfig
 from ludo.simulation import aggregate, run_batch, run_simulation
 
@@ -27,11 +32,17 @@ def mcts_factory(player: int, iterations: int = 200):
     return make_mcts_bot(iterations=iterations, seed=1000 + player)
 
 
+def evasive_mcts_factory(player: int, iterations: int = 200):
+    return make_mcts_evasive_bot(iterations=iterations, seed=1000 + player)
+
+
 def _factory(name: str, iterations: int):
     if name == "random":
         return random_factory
     if name == "greedy":
         return greedy_factory
+    if name == "evasive_mcts":
+        return evasive_mcts_factory
     return functools.partial(mcts_factory, iterations=iterations)
 
 
@@ -72,7 +83,12 @@ def main() -> None:
     print(f"avg_turns={stats['avg_turns']:.1f} avg_errors={stats['avg_errors']:.2f}")
 
 
-FACTORIES = {"random": random_factory, "greedy": greedy_factory, "mcts": mcts_factory}
+FACTORIES = {
+    "random": random_factory,
+    "greedy": greedy_factory,
+    "mcts": mcts_factory,
+    "evasive_mcts": evasive_mcts_factory,
+}
 
 
 if __name__ == "__main__":

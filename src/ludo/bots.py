@@ -2,7 +2,7 @@ import random
 from typing import Callable
 
 from ludo.model import Observation
-from ludo.mcts import make_mcts_bot
+from ludo.mcts import make_mcts_bot, make_mcts_evasive_bot
 
 BotFn = Callable[[Observation], int | None]
 

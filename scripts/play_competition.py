@@ -10,7 +10,12 @@ Usage:
 import argparse
 import logging
 
-from ludo.bots import make_greedy_bot, make_mcts_bot, make_random_bot
+from ludo.bots import (
+    make_greedy_bot,
+    make_mcts_bot,
+    make_mcts_evasive_bot,
+    make_random_bot,
+)
 from ludo.model import GameConfig
 from competition.runner import run_competition
 
@@ -26,7 +31,9 @@ def main() -> None:
     parser.add_argument("--game-id", required=True)
     parser.add_argument("--username", required=True)
     parser.add_argument("--password", required=True)
-    parser.add_argument("--bot", choices=[*BOTS, "mcts"], default="greedy")
+    parser.add_argument(
+        "--bot", choices=[*BOTS, "mcts", "evasive_mcts"], default="greedy"
+    )
     parser.add_argument("--iterations", type=int, default=200)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--players", type=int, default=2)
@@ -42,6 +49,8 @@ def main() -> None:
 
     if args.bot == "mcts":
         bot = make_mcts_bot(iterations=args.iterations, seed=args.seed)
+    elif args.bot == "evasive_mcts":
+        bot = make_mcts_evasive_bot(iterations=args.iterations, seed=args.seed)
     else:
         bot = BOTS[args.bot]()
 

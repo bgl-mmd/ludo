@@ -174,3 +174,109 @@ def make_mcts_bot(
         return _search(state, game_cfg, iterations, rng, exploration_constant, obs.legal_actions)
 
     return bot
+
+
+def _destination(pos: int, dice: int) -> int | None:
+    if pos == 0:
+        return 1 if dice == 6 else None
+    return pos + dice
+
+
+def _is_threatened(
+    pos: int, opponent_tokens: tuple[tuple[int, ...], ...], danger_window: int
+) -> bool:
+    """True if an opponent token is behind `pos` by 1..danger_window steps on the track."""
+    if not 1 <= pos <= 40:
+        return False
+    return any(
+        1 <= pos - opponent_pos <= danger_window
+        for opponent in opponent_tokens
+        for opponent_pos in opponent
+        if 1 <= opponent_pos <= 40
+    )
+
+
+def _classify_actions(
+    obs: Observation, danger_window: int
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """Split legal actions into (captures, escapes) on player-relative coords.
+
+    A capture lands on an opponent token. An escape moves a threatened token
+    (opponent 1..danger_window behind) fully out of that danger window or into
+    the home stretch.
+    """
+    captures: list[int] = []
+    escapes: list[int] = []
+    for action in obs.legal_actions:
+        dest = _destination(obs.own_tokens[action], obs.dice_value)
+        if dest is None:
+            continue
+        if 1 <= dest <= 40 and any(
+            dest in opponent for opponent in obs.opponent_tokens
+        ):
+            captures.append(action)
+        elif _is_threatened(
+            obs.own_tokens[action], obs.opponent_tokens, danger_window
+        ) and (
+            dest > 40
+            or not _is_threatened(dest, obs.opponent_tokens, danger_window)
+        ):
+            escapes.append(action)
+    return tuple(captures), tuple(escapes)
+
+
+def _obs_score(action: int, obs: Observation) -> tuple[int, int, int]:
+    pos = obs.own_tokens[action]
+    dest = 1 if pos == 0 else pos + obs.dice_value
+    captures = int(
+        1 <= dest <= 40
+        and any(dest == token for opponent in obs.opponent_tokens for token in opponent)
+    )
+    enters = int(pos == 0)
+    return (captures, enters, pos)
+
+
+def make_mcts_evasive_bot(
+    iterations: int = 200,
+    seed: int | None = None,
+    config: GameConfig | None = None,
+    exploration_constant: float = 1.41,
+    danger_window: int = 4,
+) -> BotFn:
+    """MCTS bot with capture-first, then flee-if-threatened priorities.
+
+    Priorities per turn:
+      1. If any legal move captures an opponent token, MCTS picks among captures.
+      2. Elif an opponent is 1..danger_window steps behind a token, MCTS picks
+         among moves that get that token fully out of the danger window.
+      3. Otherwise plain MCTS.
+    """
+    cfg = config or GameConfig()
+    rng = random.Random(seed)
+
+    def bot(obs: Observation) -> int | None:
+        if not obs.legal_actions:
+            return None
+        game_cfg = GameConfig(
+            num_players=obs.num_players,
+            tokens_per_player=cfg.tokens_per_player,
+            board_size=cfg.board_size,
+            home_stretch_size=cfg.home_stretch_size,
+            dice_sides=cfg.dice_sides,
+            max_consecutive_sixes=cfg.max_consecutive_sixes,
+        )
+        captures, escapes = _classify_actions(obs, danger_window)
+        root_actions = captures or escapes or obs.legal_actions
+        action = _search(
+            _observation_to_state(obs, game_cfg),
+            game_cfg,
+            iterations,
+            rng,
+            exploration_constant,
+            root_actions,
+        )
+        if action is None:
+            return max(obs.legal_actions, key=lambda a: _obs_score(a, obs))
+        return action
+
+    return bot
