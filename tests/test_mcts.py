@@ -3,7 +3,7 @@ from dataclasses import replace
 
 from ludo.bots import make_mcts_bot
 from ludo.engine import new_game
-from ludo.mcts import _observation_to_state
+from ludo.mcts import _observation_to_state, _score
 from ludo.model import CompetitionState, GameConfig, GameState, Observation
 from ludo.observation import get_observation
 from ludo.rules import get_legal_actions
@@ -118,6 +118,39 @@ class TestObservationToState:
                 get_observation(state, player, config), config
             )
             assert reconstructed.tokens == state.tokens
+
+
+class TestScore:
+    def test_real_capture_is_detected(self) -> None:
+        # p0 rel 5 -> dest 8 (global 8); p1 rel 28 = global 8.
+        state = _state(tokens=((5, 0, 0, 0), (28, 0, 0, 0)), dice_value=3)
+        assert _score(0, state, CONFIG)[0] == 1
+
+    def test_numeric_coincidence_is_not_a_capture(self) -> None:
+        # p1 rel 8 = global 28, not global 8; dest 8 is empty.
+        state = _state(tokens=((5, 0, 0, 0), (8, 0, 0, 0)), dice_value=3)
+        assert _score(0, state, CONFIG)[0] == 0
+
+    def test_no_capture_on_home_stretch(self) -> None:
+        state = _state(tokens=((40, 0, 0, 0), (0, 0, 0, 0)), dice_value=4)
+        assert _score(0, state, CONFIG)[0] == 0
+
+    def test_capture_is_symmetric_between_players(self) -> None:
+        # p1 rel 5 -> dest 8 (global 28); p0 rel 28 = global 28.
+        state = _state(
+            tokens=((28, 0, 0, 0), (5, 0, 0, 0)),
+            current_player=1,
+            dice_value=3,
+        )
+        assert _score(0, state, CONFIG)[0] == 1
+
+    def test_four_player_capture_is_detected(self) -> None:
+        # p0 rel 5 -> dest 8 (global 8); p2 rel 28 = global 8.
+        state = _state(
+            tokens=((5, 0, 0, 0), (0, 0, 0, 0), (28, 0, 0, 0), (0, 0, 0, 0)),
+            dice_value=3,
+        )
+        assert _score(0, state, CONFIG4)[0] == 1
 
 
 class TestMctsBot:

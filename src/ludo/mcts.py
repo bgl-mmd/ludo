@@ -7,7 +7,7 @@ from ludo.coordinates import global_to_player, player_to_global
 from ludo.dice import roll_dice
 from ludo.engine import apply_action
 from ludo.model import CompetitionState, GameConfig, GameState, Observation
-from ludo.rules import get_legal_actions, is_game_over
+from ludo.rules import check_capture, get_legal_actions, is_game_over
 
 BotFn = Callable[[Observation], int | None]
 
@@ -66,14 +66,7 @@ def _score(action: int, state: GameState, config: GameConfig) -> tuple[int, int,
     player = state.current_player
     pos = state.tokens[player][action]
     dest = 1 if pos == 0 else pos + state.dice_value
-    captures = int(
-        1 <= dest <= config.board_size
-        and any(
-            dest in state.tokens[p]
-            for p in range(config.num_players)
-            if p != player
-        )
-    )
+    captures = int(check_capture(state, player, dest, config) is not None)
     enters = int(pos == 0)
     return (captures, enters, pos)
 
