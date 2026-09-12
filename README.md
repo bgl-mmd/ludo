@@ -4,8 +4,14 @@
 
 The bot polls the server at a fixed interval for game state updates.
 
+**Linux (source):**
 ```bash
 PYTHONPATH=src python3 scripts/play_competition.py --game-id game06 --username bot1 --password 123 --bot mcts --iterations 500 --poll-interval 2
+```
+
+**Windows (executable):**
+```powershell
+play_competition.exe --game-id game06 --username bot1 --password 123 --bot mcts --iterations 500 --poll-interval 2
 ```
 
 | Flag | Default | Description |
@@ -27,8 +33,14 @@ PYTHONPATH=src python3 scripts/play_competition.py --game-id game06 --username b
 
 The server POSTs the game state to your callback URL. This script runs a small HTTP server to receive those callbacks and reply with moves.
 
+**Linux (source):**
 ```bash
 PYTHONPATH=src python3 scripts/play_callback.py --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gs={0}" --bot mcts --iterations 500
+```
+
+**Windows (executable):**
+```powershell
+play_callback.exe --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gs={0}" --bot mcts --iterations 500
 ```
 
 | Flag | Default | Description |
