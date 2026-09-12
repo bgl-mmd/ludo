@@ -6,12 +6,12 @@ The bot polls the server at a fixed interval for game state updates.
 
 **Linux (source):**
 ```bash
-PYTHONPATH=src python3 scripts/play_competition.py --game-id game06 --username bot1 --password 123 --bot mcts --iterations 500 --poll-interval 2
+PYTHONPATH=src python3 scripts/play_competition.py --game-id game06 --username bot1 --password 123 --bot evasive_mcts --iterations 200 --poll-interval 2
 ```
 
 **Windows (executable):**
 ```powershell
-play_competition.exe --game-id game06 --username bot1 --password 123 --bot mcts --iterations 500 --poll-interval 2
+play_competition.exe --game-id game06 --username bot1 --password 123 --bot evasive_mcts --iterations 200 --poll-interval 2
 ```
 
 | Flag | Default | Description |
@@ -35,12 +35,12 @@ The server POSTs the game state to your callback URL. This script runs a small H
 
 **Linux (source):**
 ```bash
-PYTHONPATH=src python3 scripts/play_callback.py --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gamestate={0}" --bot mcts --iterations 500
+PYTHONPATH=src python3 scripts/play_callback.py --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gamestate={0}" --bot evasive_mcts --iterations 200
 ```
 
 **Windows (executable):**
 ```powershell
-play_callback.exe --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gamestate={0}" --bot mcts --iterations 500
+play_callback.exe --game-id game06 --username bot1 --password 123 --callback-url "http://45.82.138.21:8000/?gamestate={0}" --bot evasive_mcts --iterations 200
 ```
 
 | Flag | Default | Description |
@@ -57,3 +57,16 @@ play_callback.exe --game-id game06 --username bot1 --password 123 --callback-url
 | `--players` | `2` | Number of players |
 
 > The `{0}` in `--callback-url` is required — the server replaces it with the encoded game state. The port in the callback URL determines which port the local server listens on (default `8000`).
+
+---
+
+## Building executables with PyInstaller
+
+Build a single-file executable for each script:
+
+```bash
+pyinstaller --onefile --paths src scripts/play_competition.py
+pyinstaller --onefile --paths src scripts/play_callback.py
+```
+
+The executables are written to `dist/` as `play_competition` / `play_competition.exe` and `play_callback` / `play_callback.exe`. The `--paths src` flag is required so PyInstaller can find the `ludo` package. They accept the same flags as the scripts above.
